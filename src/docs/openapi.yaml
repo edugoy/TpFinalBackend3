@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: ShipNow API
+  version: 1.0.0
+  description: API profesional para administración y tracking de envíos.
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /api/health:
+    get:
+      tags: [System]
+      summary: Health check de API y MongoDB
+      responses:
+        '200':
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '503':
+          description: Base de datos no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/logger/test:
+    get:
+      tags: [System]
+      summary: Genera eventos de prueba para Winston
+      responses:
+        '200': { description: Eventos emitidos }
+        '403': { description: Endpoint interno deshabilitado }
+  /api/users:
+    post:
+      tags: [Users]
+      summary: Crear usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      tags: [Users]
+      summary: Listar usuarios paginados
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        '200': { description: Lista de usuarios }
+  /api/users/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Users]
+      summary: Obtener usuario por ID
+      responses:
+        '200': { description: Usuario encontrado }
+        '404': { description: Usuario no encontrado }
+    patch:
+      tags: [Users]
+      summary: Actualizar usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200': { description: Usuario actualizado }
+        '400': { description: Datos inválidos }
+        '404': { description: Usuario no encontrado }
+    delete:
+      tags: [Users]
+      summary: Eliminar usuario
+      responses:
+        '200': { description: Usuario eliminado }
+        '404': { description: Usuario no encontrado }
+  /api/users/{id}/documents:
+    post:
+      tags: [Files, Users]
+      summary: Cargar documentos de un usuario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                documents:
+                  type: array
+                  maxItems: 5
+                  items: { type: string, format: binary }
+      responses:
+        '201': { description: Documentos cargados }
+        '400': { description: Archivo requerido o demasiado grande }
+        '415': { description: Tipo de archivo inválido }
+  /api/shipments:
+    post:
+      tags: [Shipments]
+      summary: Crear envío
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentCreate'
+      responses:
+        '201':
+          description: Envío creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentResponse'
+        '400': { description: Datos inválidos }
+        '404': { description: Usuario remitente no encontrado }
+    get:
+      tags: [Shipments]
+      summary: Listar envíos paginados
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/ShipmentStatus'
+      responses:
+        '200': { description: Lista de envíos }
+  /api/shipments/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Shipments]
+      summary: Obtener envío por ID
+      responses:
+        '200': { description: Envío encontrado }
+        '404': { description: Envío no encontrado }
+    patch:
+      tags: [Shipments]
+      summary: Editar un envío en estado CREATED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentUpdate'
+      responses:
+        '200': { description: Envío actualizado }
+        '400': { description: Datos inválidos }
+        '409': { description: Estado no permite edición }
+    delete:
+      tags: [Shipments]
+      summary: Eliminar envío cancelable
+      responses:
+        '200': { description: Envío eliminado }
+        '409': { description: Estado no permite eliminación }
+  /api/shipments/{id}/status:
+    patch:
+      tags: [Shipments]
+      summary: Cambiar estado de un envío
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/ShipmentStatus' }
+                note: { type: string }
+      responses:
+        '200': { description: Estado actualizado }
+        '409': { description: Transición de estado inválida }
+  /api/shipments/tracking/{idOrCode}:
+    get:
+      tags: [Tracking]
+      summary: Consultar tracking por ID o trackingCode
+      parameters:
+        - in: path
+          name: idOrCode
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Historial de tracking }
+        '404': { description: Envío no encontrado }
+  /api/shipments/{id}/receipt:
+    post:
+      tags: [Files, Shipments]
+      summary: Cargar comprobante de envío/entrega
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [receipt]
+              properties:
+                receipt: { type: string, format: binary }
+      responses:
+        '201': { description: Comprobante cargado }
+        '400': { description: Archivo requerido o demasiado grande }
+        '415': { description: Tipo de archivo inválido }
+  /api/mocks/users:
+    post:
+      tags: [Mocks]
+      summary: Generar usuarios simulados
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [count]
+              properties:
+                count: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        '201': { description: Usuarios generados }
+        '400': { description: Cantidad inválida }
+  /api/mocks/shipments:
+    post:
+      tags: [Mocks]
+      summary: Generar envíos simulados
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [count]
+              properties:
+                count: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        '201': { description: Envíos generados }
+        '400': { description: Cantidad inválida }
+components:
+  schemas:
+    ShipmentStatus:
+      type: string
+      enum: [CREATED, IN_TRANSIT, DELIVERED, CANCELLED]
+    User:
+      type: object
+      properties:
+        _id: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        documents:
+          type: array
+          items: { $ref: '#/components/schemas/FileMetadata' }
+    UserCreate:
+      type: object
+      required: [firstName, lastName, email]
+      properties:
+        firstName: { type: string, example: Ana }
+        lastName: { type: string, example: López }
+        email: { type: string, format: email, example: ana@example.com }
+        phone: { type: string, example: '+54 11 5555-0000' }
+    UserUpdate:
+      type: object
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+    Shipment:
+      type: object
+      properties:
+        _id: { type: string }
+        trackingCode: { type: string, example: SN-M123ABC-ABC123 }
+        sender: { type: string }
+        recipient:
+          type: object
+          properties:
+            name: { type: string }
+            address: { type: string }
+        package:
+          type: object
+          properties:
+            description: { type: string }
+            weightKg: { type: number }
+        status: { $ref: '#/components/schemas/ShipmentStatus' }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              status: { $ref: '#/components/schemas/ShipmentStatus' }
+              note: { type: string }
+              timestamp: { type: string, format: date-time }
+        receipt: { $ref: '#/components/schemas/FileMetadata' }
+    ShipmentCreate:
+      type: object
+      required: [senderId, recipientName, recipientAddress, packageDescription]
+      properties:
+        senderId: { type: string }
+        recipientName: { type: string, example: Pedro Pérez }
+        recipientAddress: { type: string, example: Av. Corrientes 1234 }
+        packageDescription: { type: string, example: Documentación }
+        weightKg: { type: number, example: 2.5 }
+    ShipmentUpdate:
+      type: object
+      properties:
+        recipientName: { type: string }
+        recipientAddress: { type: string }
+        packageDescription: { type: string }
+        weightKg: { type: number }
+    FileMetadata:
+      type: object
+      properties:
+        originalName: { type: string }
+        filename: { type: string }
+        mimeType: { type: string }
+        size: { type: integer }
+        path: { type: string }
+        uploadedAt: { type: string, format: date-time }
+    Success:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { type: object }
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/Success'
+    ShipmentResponse:
+      allOf:
+        - $ref: '#/components/schemas/Success'
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string, example: Datos inválidos }
+            details: {}

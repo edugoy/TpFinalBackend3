@@ -1,0 +1,35 @@
+{
+  "name": "shipnow-backend",
+  "version": "1.0.0",
+  "description": "API backend profesional para gestión de envíos ShipNow - Entrega Final Coderhouse Backend",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "cross-env NODE_ENV=test mocha --timeout 30000 --exit \"test/**/*.test.js\"",
+    "test:watch": "cross-env NODE_ENV=test mocha --watch --timeout 30000 \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.17.0",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "chai": "^4.5.0",
+    "cross-env": "^7.0.3",
+    "mocha": "^11.1.0",
+    "mongodb-memory-server": "^10.1.4",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
+  }
+}

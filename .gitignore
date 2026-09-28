@@ -1,0 +1,12 @@
+node_modules/
+.env
+logs/*.log
+uploads/*
+!uploads/.gitkeep
+!logs/.gitkeep
+coverage/
+.nyc_output/
+.DS_Store
+*.tmp
+*.temp
+npm-debug.log*
